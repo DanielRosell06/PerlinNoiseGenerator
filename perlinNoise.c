@@ -64,6 +64,19 @@ void gerarBitmap(const char* nomeArquivo, unsigned char** dados, int largura, in
     for (int i = altura - 1; i >= 0; i--) { // BMP armazena de baixo para cima
         for (int j = 0; j < largura; j++) {
             unsigned char cor = dados[i][j]; // Tonalidade de cinza
+
+
+            /* Codigo que deixa azul e verde, e cria um efeito de sombreamento
+
+            if (cor > 127){
+                unsigned char pixel[3] = {0, 255-cor, 0};
+                fwrite(pixel, sizeof(unsigned char), 3, arquivo);
+            }else{
+                unsigned char pixel[3] = {cor, 0, 0};
+                fwrite(pixel, sizeof(unsigned char), 3, arquivo);
+            }
+            */
+
             unsigned char pixel[3] = {cor, cor, cor}; // RGB igual para tons de cinza
             fwrite(pixel, sizeof(unsigned char), 3, arquivo);
         }
@@ -215,21 +228,19 @@ void dobraTamanhoArquivo(int n) {
 }
 
 
-void aplicaDesfoque(const char* nomeArquivo, int n) {
-    FILE* arquivo = fopen(nomeArquivo, "rb");
-    if (!arquivo) {
-        perror("Erro ao abrir o arquivo");
+void aplicaDesfoque(const char* nomeArquivo, int n, int tamanhoJanela) {
+    // Verifica se o tamanho da janela é ímpar
+    if (tamanhoJanela % 2 == 0) {
+        printf("Erro: O tamanho da janela deve ser ímpar.\n");
         exit(1);
     }
 
-    // Verifica o tamanho do arquivo
-    fseek(arquivo, 0, SEEK_END);
-    long tamanhoArquivo = ftell(arquivo);
-    rewind(arquivo);
+    int offset = tamanhoJanela / 2; // Offset com base no tamanho da janela
 
-    if (tamanhoArquivo != n * n) {
-        fprintf(stderr, "Erro: Tamanho do arquivo (%ld bytes) n\u00e3o corresponde a %d x %d.\n", tamanhoArquivo, n, n);
-        fclose(arquivo);
+    // Abre o arquivo binário para leitura
+    FILE* arquivo = fopen(nomeArquivo, "rb");
+    if (!arquivo) {
+        perror("Erro ao abrir o arquivo");
         exit(1);
     }
 
@@ -251,28 +262,31 @@ void aplicaDesfoque(const char* nomeArquivo, int n) {
         imagemBlur[i] = (unsigned char*)malloc(n * sizeof(unsigned char));
     }
 
-    // Aplica o filtro de desfoque (usa uma janela 35x35)
-    for (int y = 17; y < n - 17; y++) {
-        for (int x = 17; x < n - 17; x++) {
-            int soma = 0;
-            for (int ky = -17; ky <= 17; ky++) {
-                for (int kx = -17; kx <= 17; kx++) {
+    // Aplica o filtro de desfoque (desconsidera as bordas)
+    for (int y = offset; y < n - offset; y++) {
+        for (int x = offset; x < n - offset; x++) {
+            int soma = 0, contador = 0;
+
+            for (int ky = -offset; ky <= offset; ky++) {
+                for (int kx = -offset; kx <= offset; kx++) {
                     soma += imagem[y + ky][x + kx];
+                    contador++;
                 }
             }
-            imagemBlur[y][x] = soma / 1225; // Média de 1225 pixels
+
+            imagemBlur[y][x] = soma / contador;
         }
     }
 
     // Copia as bordas sem modificação
     for (int x = 0; x < n; x++) {
-        for (int y = 0; y < 17; y++) {
+        for (int y = 0; y < offset; y++) {
             imagemBlur[y][x] = imagem[y][x];
             imagemBlur[n - 1 - y][x] = imagem[n - 1 - y][x];
         }
     }
-    for (int y = 17; y < n - 17; y++) {
-        for (int x = 0; x < 17; x++) {
+    for (int y = offset; y < n - offset; y++) {
+        for (int x = 0; x < offset; x++) {
             imagemBlur[y][x] = imagem[y][x];
             imagemBlur[y][n - 1 - x] = imagem[y][n - 1 - x];
         }
@@ -303,8 +317,17 @@ void aplicaDesfoque(const char* nomeArquivo, int n) {
 
 int main() {
 
-    printf("\nCriando arquivo inicial\n");
-    int n = 100, delta = 140, comeco = 0, i, num_linhas = 2;
+    printf("\nCriando arquivo inicial...");
+
+    // Variavies de começo
+    int n = 125, delta = 140, comeco = 0, i, num_linhas = 2;
+    // Variaveis de Redimensionar
+    int redimensoes = 3; //tamanho do arquivo = n * 2^redimensoes
+    // Variavies de Desfoque
+    int repeticaoDesfoque = 3, janelaDesfoque = 49/*ímpar*/;
+
+    // Variaveis gerais
+    int tamanhoImagem = n * pow(2, redimensoes);
 
     // Randomizando a Seed
     srand(time(NULL));
@@ -322,6 +345,7 @@ int main() {
         firstArrayLine[i] = 127 * (sin(((6 * PI) / n) * i)) + 127;
     }
 
+    printf("\nCriando novas linhas...\n");
 
     // Cria e salva novas linhas seguindo o padrão da primeira
     // esta salvando a partir da linha n, pra sair do padrão do seno
@@ -343,27 +367,29 @@ int main() {
     free(secondArrayLine);
 
 
-    printf("Redimensionando os arquivos\n");
+    printf("Redimensionando os arquivos...\n");
 
-    dobraTamanhoArquivo(n);
-    dobraTamanhoArquivo(n*2);
-    dobraTamanhoArquivo(n*4);
+    for(i = 0; i < redimensoes; i++){
+        dobraTamanhoArquivo(n * pow(2, i));
+    }
 
-    printf("Arquivos redimensionados com sucesso!");
+    printf("Aplicando Desfoque...\n");
 
 
     // APLICANDO DESFOQUE
-    
-    aplicaDesfoque("linhas.bin", 800);
-    aplicaDesfoque("linhas.bin", 800);
-    aplicaDesfoque("linhas.bin", 800);
 
-    printf("desfoque aplicado com sucesso!\n");
+    for(i = 0; i < repeticaoDesfoque; i++){
+        aplicaDesfoque("linhas.bin", tamanhoImagem, janelaDesfoque);
+    }
+
+    printf("Gerando a imagem...\n");
+
+
 
 
     //GERANDO A IMAGEM
     
-    int largura = 800, altura = 800;
+    int largura = tamanhoImagem, altura = tamanhoImagem;
 
     // Aloca matriz para os dados da imagem
     unsigned char** dados = (unsigned char**)malloc(altura * sizeof(unsigned char*));
