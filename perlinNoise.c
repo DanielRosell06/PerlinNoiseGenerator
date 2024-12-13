@@ -1,15 +1,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <time.h>
 
 #define PI 3.1415
 
 /*  CÓDIGO DE ALEATORIEDADE DE SEED
 
-    #include <time.h>
     #include <stdlib.h>
 
-    srand(time(NULL));
+    
 */
 
 
@@ -71,7 +71,6 @@ void gerarBitmap(const char* nomeArquivo, unsigned char** dados, int largura, in
 
     fclose(arquivo);
 }
-
 
 
 unsigned char* novaLinha(unsigned char* linhaInicial, int tamanho, int variacao) {
@@ -216,17 +215,104 @@ void dobraTamanhoArquivo(int n) {
 }
 
 
+void aplicaDesfoque(const char* nomeArquivo, int n) {
+    FILE* arquivo = fopen(nomeArquivo, "rb");
+    if (!arquivo) {
+        perror("Erro ao abrir o arquivo");
+        exit(1);
+    }
+
+    // Verifica o tamanho do arquivo
+    fseek(arquivo, 0, SEEK_END);
+    long tamanhoArquivo = ftell(arquivo);
+    rewind(arquivo);
+
+    if (tamanhoArquivo != n * n) {
+        fprintf(stderr, "Erro: Tamanho do arquivo (%ld bytes) n\u00e3o corresponde a %d x %d.\n", tamanhoArquivo, n, n);
+        fclose(arquivo);
+        exit(1);
+    }
+
+    // Aloca matriz para os dados da imagem
+    unsigned char** imagem = (unsigned char**)malloc(n * sizeof(unsigned char*));
+    for (int i = 0; i < n; i++) {
+        imagem[i] = (unsigned char*)malloc(n * sizeof(unsigned char));
+    }
+
+    // Lê os dados do arquivo para a matriz
+    for (int i = 0; i < n; i++) {
+        fread(imagem[i], sizeof(unsigned char), n, arquivo);
+    }
+    fclose(arquivo);
+
+    // Cria uma matriz para armazenar o resultado do desfoque
+    unsigned char** imagemBlur = (unsigned char**)malloc(n * sizeof(unsigned char*));
+    for (int i = 0; i < n; i++) {
+        imagemBlur[i] = (unsigned char*)malloc(n * sizeof(unsigned char));
+    }
+
+    // Aplica o filtro de desfoque (usa uma janela 35x35)
+    for (int y = 17; y < n - 17; y++) {
+        for (int x = 17; x < n - 17; x++) {
+            int soma = 0;
+            for (int ky = -17; ky <= 17; ky++) {
+                for (int kx = -17; kx <= 17; kx++) {
+                    soma += imagem[y + ky][x + kx];
+                }
+            }
+            imagemBlur[y][x] = soma / 1225; // Média de 1225 pixels
+        }
+    }
+
+    // Copia as bordas sem modificação
+    for (int x = 0; x < n; x++) {
+        for (int y = 0; y < 17; y++) {
+            imagemBlur[y][x] = imagem[y][x];
+            imagemBlur[n - 1 - y][x] = imagem[n - 1 - y][x];
+        }
+    }
+    for (int y = 17; y < n - 17; y++) {
+        for (int x = 0; x < 17; x++) {
+            imagemBlur[y][x] = imagem[y][x];
+            imagemBlur[y][n - 1 - x] = imagem[y][n - 1 - x];
+        }
+    }
+
+    // Reescreve o arquivo com a imagem desfocada
+    arquivo = fopen(nomeArquivo, "wb");
+    if (!arquivo) {
+        perror("Erro ao abrir o arquivo para escrita");
+        exit(1);
+    }
+    for (int i = 0; i < n; i++) {
+        fwrite(imagemBlur[i], sizeof(unsigned char), n, arquivo);
+    }
+    fclose(arquivo);
+
+    // Libera a memória alocada
+    for (int i = 0; i < n; i++) {
+        free(imagem[i]);
+        free(imagemBlur[i]);
+    }
+    free(imagem);
+    free(imagemBlur);
+}
+
+
+
 
 int main() {
 
     printf("\nCriando arquivo inicial\n");
     int n = 100, delta = 140, comeco = 0, i, num_linhas = 2;
 
+    // Randomizando a Seed
+    srand(time(NULL));
+
     // Abre o arquivo texto para salvar as linhas
     FILE *arquivo_00 = fopen("linhas.bin", "w");
     fclose(arquivo_00);
-    FILE *arquivo_01 = fopen("blocos.bin", "w");
-    fclose(arquivo_01);
+    
 
     // Array utilizado como primeira linha
     unsigned char* firstArrayLine = (unsigned char*) malloc(n * sizeof(unsigned char));
@@ -262,15 +348,22 @@ int main() {
     dobraTamanhoArquivo(n);
     dobraTamanhoArquivo(n*2);
     dobraTamanhoArquivo(n*4);
-    dobraTamanhoArquivo(n*8);
-    dobraTamanhoArquivo(n*16);
 
     printf("Arquivos redimensionados com sucesso!");
 
 
+    // APLICANDO DESFOQUE
+    
+    aplicaDesfoque("linhas.bin", 800);
+    aplicaDesfoque("linhas.bin", 800);
+    aplicaDesfoque("linhas.bin", 800);
+
+    printf("desfoque aplicado com sucesso!\n");
+
+
     //GERANDO A IMAGEM
     
-    int largura = 3200, altura = 3200;
+    int largura = 800, altura = 800;
 
     // Aloca matriz para os dados da imagem
     unsigned char** dados = (unsigned char**)malloc(altura * sizeof(unsigned char*));
@@ -299,6 +392,7 @@ int main() {
     free(dados);
 
     printf("Imagem BMP gerada com sucesso!\n");
+
 
 
     return 0;
