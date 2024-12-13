@@ -66,7 +66,7 @@ void gerarBitmap(const char* nomeArquivo, unsigned char** dados, int largura, in
             unsigned char cor = dados[i][j]; // Tonalidade de cinza
 
 
-            /* Codigo que deixa azul e verde, e cria um efeito de sombreamento
+            /* Codigo que deixa azul e verde, e cria um efeito de sombreamento  
 
             if (cor > 127){
                 unsigned char pixel[3] = {0, 255-cor, 0};
@@ -324,7 +324,7 @@ int main() {
     // Variaveis de Redimensionar
     int redimensoes = 3; //tamanho do arquivo = n * 2^redimensoes
     // Variavies de Desfoque
-    int repeticaoDesfoque = 3, janelaDesfoque = 49/*ímpar*/;
+    int repeticaoDesfoque = 3, janelaDesfoque = 7/*ímpar*/;
 
     // Variaveis gerais
     int tamanhoImagem = n * pow(2, redimensoes);
@@ -367,27 +367,30 @@ int main() {
     free(secondArrayLine);
 
 
+
+    
+    // APLICANDO DESFOQUE
+    printf("Aplicando Desfoque...\n");
+
+    for(i = 0; i < repeticaoDesfoque; i++){
+        aplicaDesfoque("linhas.bin", n, janelaDesfoque);
+    }
+
+
+    // REDIMENSIONANDO OS ARQUIVOS
     printf("Redimensionando os arquivos...\n");
 
     for(i = 0; i < redimensoes; i++){
         dobraTamanhoArquivo(n * pow(2, i));
+        aplicaDesfoque("linhas.bin", n * pow(2, i+1), 5);
     }
 
-    printf("Aplicando Desfoque...\n");
-
-
-    // APLICANDO DESFOQUE
-
-    for(i = 0; i < repeticaoDesfoque; i++){
-        aplicaDesfoque("linhas.bin", tamanhoImagem, janelaDesfoque);
-    }
-
-    printf("Gerando a imagem...\n");
-
+    //Fazendo um pequeno desfoque pra tirar o problema de granulamento
 
 
 
     //GERANDO A IMAGEM
+    printf("Gerando a imagem...\n");   
     
     int largura = tamanhoImagem, altura = tamanhoImagem;
 
