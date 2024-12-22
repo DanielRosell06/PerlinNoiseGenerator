@@ -76,7 +76,7 @@ void gerarBitmap(const char* nomeArquivo, unsigned char** dados, int largura, in
                 fwrite(pixel, sizeof(unsigned char), 3, arquivo);
             }
             */
-
+           
             unsigned char pixel[3] = {cor, cor, cor}; // RGB igual para tons de cinza
             fwrite(pixel, sizeof(unsigned char), 3, arquivo);
         }
@@ -256,39 +256,49 @@ void aplicaDesfoque(const char* nomeArquivo, int n, int tamanhoJanela) {
     }
     fclose(arquivo);
 
+    // Cria uma matriz estendida para facilitar o cálculo uniforme
+    int tamanhoExtendido = n + 2 * offset;
+    unsigned char** imagemExtendida = (unsigned char**)malloc(tamanhoExtendido * sizeof(unsigned char*));
+    for (int i = 0; i < tamanhoExtendido; i++) {
+        imagemExtendida[i] = (unsigned char*)malloc(tamanhoExtendido * sizeof(unsigned char));
+    }
+
+    // Preenche a matriz estendida com reflexão dos valores das bordas
+    for (int y = 0; y < tamanhoExtendido; y++) {
+        for (int x = 0; x < tamanhoExtendido; x++) {
+            int ny = y - offset;
+            int nx = x - offset;
+
+            // Reflexão nas bordas
+            if (ny < 0) ny = -ny;                 // Superior
+            if (ny >= n) ny = 2 * n - ny - 2;     // Inferior
+            if (nx < 0) nx = -nx;                 // Esquerda
+            if (nx >= n) nx = 2 * n - nx - 2;     // Direita
+
+            imagemExtendida[y][x] = imagem[ny][nx];
+        }
+    }
+
     // Cria uma matriz para armazenar o resultado do desfoque
     unsigned char** imagemBlur = (unsigned char**)malloc(n * sizeof(unsigned char*));
     for (int i = 0; i < n; i++) {
         imagemBlur[i] = (unsigned char*)malloc(n * sizeof(unsigned char));
     }
 
-    // Aplica o filtro de desfoque (desconsidera as bordas)
-    for (int y = offset; y < n - offset; y++) {
-        for (int x = offset; x < n - offset; x++) {
+    // Aplica o filtro de desfoque na matriz original
+    for (int y = 0; y < n; y++) {
+        for (int x = 0; x < n; x++) {
             int soma = 0, contador = 0;
 
-            for (int ky = -offset; ky <= offset; ky++) {
-                for (int kx = -offset; kx <= offset; kx++) {
-                    soma += imagem[y + ky][x + kx];
+            // Varre a janela ao redor do pixel atual
+            for (int ky = 0; ky < tamanhoJanela; ky++) {
+                for (int kx = 0; kx < tamanhoJanela; kx++) {
+                    soma += imagemExtendida[y + ky][x + kx];
                     contador++;
                 }
             }
 
             imagemBlur[y][x] = soma / contador;
-        }
-    }
-
-    // Copia as bordas sem modificação
-    for (int x = 0; x < n; x++) {
-        for (int y = 0; y < offset; y++) {
-            imagemBlur[y][x] = imagem[y][x];
-            imagemBlur[n - 1 - y][x] = imagem[n - 1 - y][x];
-        }
-    }
-    for (int y = offset; y < n - offset; y++) {
-        for (int x = 0; x < offset; x++) {
-            imagemBlur[y][x] = imagem[y][x];
-            imagemBlur[y][n - 1 - x] = imagem[y][n - 1 - x];
         }
     }
 
@@ -310,7 +320,14 @@ void aplicaDesfoque(const char* nomeArquivo, int n, int tamanhoJanela) {
     }
     free(imagem);
     free(imagemBlur);
+
+    for (int i = 0; i < tamanhoExtendido; i++) {
+        free(imagemExtendida[i]);
+    }
+    free(imagemExtendida);
 }
+
+
 
 
 
