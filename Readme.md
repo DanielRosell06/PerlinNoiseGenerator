@@ -2,11 +2,15 @@
 
 ## Arquivos
 
-O arquivo perlinNoise.c é o codigo funcional e inteiro, quando rodar ele, será gerado um arquivo .bmp que contem o perlin Noise.
+O arquivo perlinNoise.c é o codigo funcional e inteiro que gera a imagem .bmp que contem o perlin Noise.
 
 O arquivo criaImagem.c contém o codigo que gera a imagem .bmp através de bitmaps.
 
 O objetivo desse projeto é otimizar ao máximo esse código para que perlin noises de qualidade sejam gerados com eficiencia e assim serem usados em geração procedural de mundos.
+
+Aqui esta um exemplo de perlin noise gerado por este algoritmo:
+
+<img src="https://github.com/DanielRosell06/PerlinNoiseGenerator/blob/main/assets/generated_perlin_image.png?raw=true">
 
 ## Autor
 Feito por Daniel Aniceto Rosell
