@@ -12,6 +12,12 @@ Aqui esta um exemplo de perlin noise gerado por este algoritmo:
 
 <img src="https://github.com/DanielRosell06/PerlinNoiseGenerator/blob/main/assets/generated_perlin_image.png?raw=true">
 
+## Compilation
+Para compilar, rode o código:
+
+`gcc .\perlinNoise.c -o perlin -lm`
+
+
 ## Autor
 Feito por Daniel Aniceto Rosell
 
