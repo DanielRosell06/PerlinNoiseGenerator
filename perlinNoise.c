@@ -5,6 +5,13 @@
 
 #define PI 3.1415
 
+// Configurações de geração
+#define N 50                   // Tamanho inicial da grade
+#define DELTA 280              // Variação máxima entre linhas
+#define REDIMENSOES 3          // Número de redimensionamentos (tamanho final = N * 2^REDIMENSOES)
+#define REPETICAO_DESFOQUE 2   // Quantas vezes o desfoque é aplicado
+#define JANELA_DESFOQUE 3      // Tamanho da janela de desfoque (deve ser ímpar)
+
 void gerarBitmap(const char *nomeArquivo, unsigned char **dados, int largura, int altura)
 {
     // Tamanho do cabeçalho BMP: 54 bytes
@@ -63,7 +70,7 @@ void gerarBitmap(const char *nomeArquivo, unsigned char **dados, int largura, in
 
             //  //Codigo que deixa azul e verde e com efeito de sombreamento
 
-            // if (cor > 110 && cor < 125){
+            // if (cor > 100 && cor < 145){
             //     unsigned char pixel[3] = {255, 255, 255};
             //     fwrite(pixel, sizeof(unsigned char), 3, arquivo);
             // }else{
@@ -387,17 +394,13 @@ int main()
 
     printf("\nCriando arquivo inicial...");
 
-    // Variavies de começo
-    int n = 50, delta = 280, comeco = 0, i, num_linhas = 2;
-    // Variaveis de Redimensionar
-    int redimensoes = 3; // tamanho do arquivo = n * 2^redimensoes
-    // Variavies de Desfoque
-    int repeticaoDesfoque = 2, janelaDesfoque = 3 /*ímpar*/;
+    // Variaveis locais
+    int n = N, i, num_linhas;
 
-    // Variaveis gerais
+    // Variaveis derivadas
     int extra = n / 2; // Linhas extras descartadas para dissipar o padrão senoidal
     int totalLinhas = n + extra;
-    int tamanhoImagem = n * pow(2, redimensoes);
+    int tamanhoImagem = n * pow(2, REDIMENSOES);
 
     // Randomizando a Seed
     srand(time(NULL));
@@ -423,14 +426,14 @@ int main()
     if (num_linhas > extra)
         salvarLinha(firstArrayLine, n);
 
-    unsigned char *secondArrayLine = novaLinha(firstArrayLine, n, delta);
+    unsigned char *secondArrayLine = novaLinha(firstArrayLine, n, DELTA);
     num_linhas = 2;
     if (num_linhas > extra)
         salvarLinha(secondArrayLine, n);
 
     while (num_linhas < totalLinhas)
     {
-        unsigned char *newLine = novaLinha(secondArrayLine, n, delta);
+        unsigned char *newLine = novaLinha(secondArrayLine, n, DELTA);
         num_linhas++;
         if (num_linhas > extra)
             salvarLinha(newLine, n);
@@ -450,15 +453,15 @@ int main()
     // APLICANDO DESFOQUE
     printf("Aplicando Desfoque...\n");
 
-    for (i = 0; i < repeticaoDesfoque; i++)
+    for (i = 0; i < REPETICAO_DESFOQUE; i++)
     {
-        aplicaDesfoque("linhas.bin", n, janelaDesfoque);
+        aplicaDesfoque("linhas.bin", n, JANELA_DESFOQUE);
     }
 
     // REDIMENSIONANDO OS ARQUIVOS
     printf("Redimensionando os arquivos...\n");
 
-    for (i = 0; i < redimensoes; i++)
+    for (i = 0; i < REDIMENSOES; i++)
     {
         dobraTamanhoArquivo(n * pow(2, i));
         aplicaDesfoque("linhas.bin", n * pow(2, i + 1), 5);
